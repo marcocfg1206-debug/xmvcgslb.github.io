@@ -1,0 +1,1041 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>App macOS – Perfil & Remesas (v2.3) + Cuadres varios</title>
+
+  <style>
+    :root{
+      --bg-start:#e8ecf3; --bg-end:#f6f8fb;
+      --glass: rgba(255,255,255,.65); --glass-strong: rgba(255,255,255,.82);
+      --border: rgba(0,0,0,.08);
+      --shadow: 0 10px 30px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.06);
+      --text:#0f172a; --muted:#64748b; --accent:#2563eb; --ok:#16a34a; --danger:#ef4444;
+      --dock-size:68px; --dock-radius:18px; --panel-radius:16px;
+      --font: system-ui, -apple-system, "SF Pro Display", "SF Pro Text", Segoe UI, Roboto, "Noto Sans", Ubuntu, Cantarell, Arial, sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:var(--font);color:var(--text);background:linear-gradient(180deg,var(--bg-start),var(--bg-end));-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+    .wrap{min-height:100vh;display:grid;place-items:center;padding-bottom:140px}
+
+    /* ---------- Tarjeta inicial (iniciales) ---------- */
+    .initials-card{background:var(--glass);border:1px solid var(--border);backdrop-filter:blur(16px) saturate(1.1);box-shadow:var(--shadow);border-radius:24px;padding:48px 56px;text-align:center}
+    .initials{font-weight:800;letter-spacing:.12em;font-size:clamp(28px,6vw,64px);background:linear-gradient(90deg,#0ea5e9,#6366f1,#22c55e);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 1px 0 rgba(255,255,255,.35)}
+    .hint{color:var(--muted);font-size:12px;margin-top:10px}
+
+    /* ---------- Dock macOS ---------- */
+    .dock-wrap{position:fixed;left:0;right:0;bottom:18px;display:flex;justify-content:center;pointer-events:none}
+    .dock{pointer-events:auto;height:var(--dock-size);padding:10px 14px;gap:14px;display:flex;align-items:flex-end;background:var(--glass);border:1px solid var(--border);backdrop-filter:blur(18px) saturate(1.2);box-shadow:var(--shadow);border-radius:var(--dock-radius)}
+    .dock-btn{width:56px;height:56px;border-radius:14px;display:grid;place-items:center;position:relative;background:linear-gradient(180deg,var(--glass-strong),rgba(255,255,255,.55));border:1px solid rgba(0,0,0,.06);box-shadow:0 4px 12px rgba(0,0,0,.08);transform-origin:50% 100%;transform:translateZ(0) scale(1);transition:transform .12s ease;cursor:pointer;user-select:none}
+    .dock-btn:active{transform:translateZ(0) scale(.95)} .dock-btn svg{width:28px;height:28px;opacity:.9}
+    .dock-label{position:absolute;bottom:70px;background:var(--glass-strong);padding:4px 8px;border-radius:8px;border:1px solid var(--border);font-size:12px;white-space:nowrap;opacity:0;transform:translateY(6px);transition:all .12s ease}
+    .dock-btn:hover .dock-label{opacity:1;transform:translateY(0)}
+
+    /* ---------- Overlays & paneles (modales) ---------- */
+    .overlay{position:fixed;inset:0;background:rgba(15,23,42,.28);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .2s ease}
+    .overlay.show{opacity:1;pointer-events:auto}
+    .panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(900px,95vw);background:var(--glass);border:1px solid var(--border);border-radius:var(--panel-radius);box-shadow:var(--shadow);overflow:hidden}
+    .panel-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,.55))}
+    .traffic{display:flex;gap:6px} .traffic span{width:12px;height:12px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+    .traffic .red{background:#ff605c}.traffic .yellow{background:#ffbd44}.traffic .green{background:#00ca4e}
+    .title{font-weight:600;color:#1f2937;font-size:14px}
+    .panel-body{padding:16px}
+
+    /* ---------- Form & elementos ---------- */
+    .grid{display:grid;gap:12px}
+    @media (min-width:720px){.grid.cols-2{grid-template-columns:1fr 1fr}.grid.cols-3{grid-template-columns:repeat(3,1fr)}}
+    label{font-size:12px;color:var(--muted)}
+    input[type="text"],input[type="number"],select{width:100%;height:40px;padding:8px 10px;border-radius:10px;border:1px solid rgba(0,0,0,.08);background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.75));outline:none;transition:box-shadow .15s ease,border-color .15s ease}
+    input:focus,select:focus{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(59,130,246,.25)}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{height:38px;padding:0 12px;border-radius:10px;border:1px solid rgba(0,0,0,.1);cursor:pointer;display:inline-flex;align-items:center;gap:8px;background:#fff}
+    .btn.primary{background:linear-gradient(180deg,#3b82f6,#2563eb);color:#fff;border:none}
+    .btn.warn{background:linear-gradient(180deg,#ef4444,#dc2626);color:#fff;border:none}
+    .btn.ghost{background:transparent}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.7);font-size:12px}
+    .kpi{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.7)}
+    .kpi strong{font-size:18px}
+    .status{padding:10px 12px;border-radius:12px;font-weight:600;border:1px solid var(--border)}
+    .diff-ok{color:var(--ok);box-shadow:0 0 0 0 rgba(22,163,74,.4);animation:pulseOk 2.2s ease-in-out infinite}
+    .diff-bad{color:var(--danger);box-shadow:0 0 0 0 rgba(239,68,68,.35);animation:pulseBad 1.6s ease-in-out infinite}
+    @keyframes pulseOk{0%{box-shadow:0 0 0 0 rgba(22,163,74,.35)}70%{box-shadow:0 0 0 10px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+    @keyframes pulseBad{0%{box-shadow:0 0 0 0 rgba(239,68,68,.3)}70%{box-shadow:0 0 0 12px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
+    table{width:100%;border-collapse:separate;border-spacing:0 6px}
+    th{font-size:12px;color:var(--muted);text-align:left;padding:4px 6px}
+    td{background:rgba(255,255,255,.7);border:1px solid var(--border);padding:8px 10px}
+    td:first-child{border-radius:10px 0 0 10px} td:last-child{border-radius:0 10px 10px 0}
+
+    /* ---------- Submodales ---------- */
+    .sub-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);backdrop-filter:blur(1px);display:none}
+    .sub-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(720px,95vw);background:var(--glass-strong);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);display:none}
+    .sub-header{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border)}
+    .sub-body{padding:12px}
+
+    .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:var(--glass-strong);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:13px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s ease}
+    .toast.show{opacity:1}
+
+    /* ===== Cuadres Varios ===== */
+    .sheet{width:min(1100px,95vw);margin:20px auto 120px;background:var(--glass);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:14px}
+    header.sheet-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .kpis3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
+    .kpi-tile{display:flex;flex-direction:column;gap:4px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.7);padding:10px}
+    .kpi-tile .label{font-size:12px;color:var(--muted)}
+    .kpi-tile .value{font-weight:700;font-size:18px}
+    .rows-frm{display:grid;gap:12px}
+    .rows-frm.cols-3{grid-template-columns:repeat(3,1fr)}
+    .denom-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .denom-grid label{font-size:12px;color:var(--muted)}
+    .denom-grid input{height:38px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .table-wrap{max-height:40vh;overflow:auto;margin-top:10px}
+    .table-compact table{width:100%;border-collapse:collapse}
+    .table-compact th,.table-compact td{border:1px solid var(--border);padding:6px 8px;font-size:12px;text-align:left}
+    .table-compact thead th{background:#f3f4f6}
+    .summary{margin-top:12px;display:flex;justify-content:space-between;align-items:center}
+    .summary .tot{font-weight:700}
+  </style>
+
+  <!-- JsBarcode: correcto (para códigos de barras) -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.12.3/dist/JsBarcode.all.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <section class="initials-card" aria-label="Pantalla principal">
+      <!-- SIEMPRE mostrar M.V.C.G -->
+      <div class="initials" id="initialsDisplay">M.V.C.G</div>
+      <div class="hint">Usa el Dock inferior → <strong>Perfil</strong>, <strong>Remesas</strong> o <strong>Cuadres varios</strong></div>
+    </section>
+  </div>
+
+  <!-- Dock -->
+  <div class="dock-wrap">
+    <nav class="dock" id="dock" aria-label="Dock macOS">
+      <button class="dock-btn" id="btnPerfil" aria-label="Perfil">
+        <span class="dock-label">Perfil</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="8" r="4"/>
+        </svg>
+      </button>
+
+      <button class="dock-btn" id="btnRemesas" aria-label="Remesas">
+        <span class="dock-label">Remesas</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 7h16l-2 12a4 4 0 0 1-4 3H10a4 4 0 0 1-4-3L4 7Z"/>
+          <path d="M9 7a3 3 0 1 1 6 0"/><path d="M12 12v6"/><path d="M10 14h4"/>
+        </svg>
+      </button>
+
+      <button class="dock-btn" id="btnVarios" aria-label="Cuadres varios">
+        <span class="dock-label">Cuadres varios</span>
+        <!-- ícono calculadora -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="4" y="3" width="16" height="18" rx="2"></rect>
+          <path d="M8 7h8M8 11h0M12 11h0M16 11h0M8 15h0M12 15h0M16 15h0"></path>
+        </svg>
+      </button>
+    </nav>
+  </div>
+
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- Panel: PERFIL -->
+  <section class="panel" id="panelPerfil" role="dialog" aria-modal="true" aria-labelledby="panelTitlePerfil" style="display:none">
+    <header class="panel-header">
+      <div class="traffic" aria-hidden="true"><span class="red"></span><span class="yellow"></span><span class="green"></span></div>
+      <div class="title" id="panelTitlePerfil">Perfil</div>
+      <button class="btn ghost" id="btnClosePerfil">Cerrar</button>
+    </header>
+    <div class="panel-body">
+      <form id="perfilForm" novalidate>
+        <div class="grid cols-2">
+          <div>
+            <label for="numeroModulo">Número de módulo</label>
+            <input id="numeroModulo" name="numeroModulo" type="text" placeholder="Ej. M01" />
+          </div>
+          <div>
+            <label for="numeroEmpleado">Número de empleado</label>
+            <input id="numeroEmpleado" name="numeroEmpleado" type="number" inputmode="numeric" placeholder="Ej. 1024" />
+          </div>
+          <div>
+            <label for="iniciales">Iniciales (no afectan la pantalla principal)</label>
+            <input id="iniciales" name="iniciales" type="text" maxlength="16" placeholder="Ej. M.V.C.G" />
+          </div>
+          <div>
+            <label for="codigoEmpleado">Código de empleado (opcional)</label>
+            <input id="codigoEmpleado" name="codigoEmpleado" type="text" placeholder="Opcional" />
+          </div>
+          <div>
+            <label for="confirmClose">Confirmar al cerrar navegador</label>
+            <div class="row" style="margin-top:6px">
+              <div class="switch" id="confirmClose" data-on="true" role="switch" aria-checked="true"><span class="knob"></span></div>
+              <small class="hint">Muestra un aviso si intentas cerrar/recargar la pestaña.</small>
+            </div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:14px; justify-content:flex-end">
+          <button type="button" class="btn" id="btnResetPerfil">Restablecer</button>
+          <button type="submit" class="btn primary" id="btnSavePerfil">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Panel: REMESAS -->
+  <section class="panel" id="panelRemesas" role="dialog" aria-modal="true" aria-labelledby="panelTitleRemesas" style="display:none">
+    <header class="panel-header">
+      <div class="traffic" aria-hidden="true"><span class="red"></span><span class="yellow"></span><span class="green"></span></div>
+      <div class="title" id="panelTitleRemesas">Remesas</div>
+      <button class="btn ghost" id="btnCloseRemesas">Cerrar</button>
+    </header>
+    <div class="panel-body">
+      <form id="remesaForm" novalidate>
+        <div class="grid cols-3">
+          <div>
+            <label for="rmBanco">Banco</label>
+            <select id="rmBanco">
+              <option value="BAM">BAM</option>
+              <option value="G&T">G&amp;T</option>
+              <option value="FICOHSA">FICOHSA</option>
+              <option value="INTERBANCO">INTERBANCO</option>
+              <option value="CHN">CHN</option>
+              <option value="PROMERICA">PROMERICA</option>
+              <option value="CUSTACLAN">CUSTACLAN</option>
+              <option value="OTROS">OTROS</option>
+            </select>
+          </div>
+          <div>
+            <label for="rmDivisa">Divisa</label>
+            <select id="rmDivisa">
+              <option value="quetales">quetales</option>
+              <option value="dolares">dolares</option>
+              <option value="euros">euros</option>
+            </select>
+          </div>
+          <div>
+            <label for="rmBolsa">ID de bolsa</label>
+            <input id="rmBolsa" type="text" placeholder="Ej. 000123" />
+          </div>
+          <div>
+            <label for="rmMontoTeorico">Monto teórico contenido</label>
+            <input id="rmMontoTeorico" type="number" step="0.01" min="0" placeholder="0.00" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button type="button" class="btn" id="btnCheques">Cheques…</button>
+          <span class="pill">Cheques: <strong id="sumCheques">—</strong></span>
+          <button type="button" class="btn" id="btnEfectivo">Administrar billetes y monedas…</button>
+          <span class="pill">Efectivo: <strong id="sumEfectivo">—</strong></span>
+        </div>
+
+        <div class="grid cols-3" style="margin-top:12px">
+          <div class="kpi"><span>Valor en cheques</span><strong id="kpiCheques">—</strong></div>
+          <div class="kpi"><span>Billetes/Monedas</span><strong id="kpiEfectivo">—</strong></div>
+          <div class="status" id="kpiDiferencia">—</div>
+        </div>
+
+        <div class="row" style="margin-top:14px; justify-content:flex-end">
+          <button type="button" class="btn primary" id="btnGuardarCuadre">Guardar cuadre</button>
+        </div>
+      </form>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0" />
+
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div class="title">Cuadres guardados</div>
+        <div class="row">
+          <button class="btn" id="btnImprimir">Generar PDF (Bolsas)</button>
+          <button class="btn warn" id="btnBorrarTodo">Borrar todos los datos</button>
+        </div>
+      </div>
+
+      <div style="max-height:36vh;overflow:auto">
+        <table id="tablaCuadres">
+          <thead>
+            <tr>
+              <th>Fecha</th><th>Banco</th><th>Divisa</th>
+              <th>Cheques</th><th>Efectivo</th><th>Teórico</th><th>Dif.</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="bodyCuadres"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sección: CUADRES VARIOS (no modal) -->
+  <section class="sheet" id="cuadresVarios" style="display:none">
+    <header class="sheet-header">
+      <div class="title">Cuadres varios</div>
+      <div class="row"><span class="pill">Divisa: <strong>Quetzales</strong></span></div>
+    </header>
+
+    <div class="kpis3">
+      <div class="kpi-tile"><div class="label">Diferencia (Contado − Teórico)</div><div class="value" id="cvDif">—</div></div>
+      <div class="kpi-tile"><div class="label">Teórico</div><div class="value" id="cvTeorico">—</div></div>
+      <div class="kpi-tile"><div class="label">Contado</div><div class="value" id="cvContado">—</div></div>
+    </div>
+
+    <div class="rows-frm cols-3">
+      <div>
+        <label for="cvBolsa">ID de bolsa (opcional)</label>
+        <input id="cvBolsa" type="text" placeholder="Ej. 000123" />
+      </div>
+      <div>
+        <label for="cvTeoricoInput">Monto teórico esperado</label>
+        <input id="cvTeoricoInput" type="number" step="0.01" min="0" placeholder=""/>
+      </div>
+    </div>
+
+    <div style="margin-top:8px" class="title">Administrar billetes y monedas</div>
+    <div id="cvCash"></div>
+
+    <div class="actions">
+      <button class="btn primary" id="cvGuardar">Guardar datos</button>
+      <button class="btn warn" id="cvLimpiarTodo">Limpiar campos</button>
+    </div>
+
+    <div class="table-wrap table-compact">
+      <table id="cvTabla">
+        <thead><tr><th>Fecha</th><th>ID bolsa</th><th>Teórico</th><th>Contado</th><th>Diferencia</th><th>Acciones</th></tr></thead>
+        <tbody id="cvBody"></tbody>
+      </table>
+    </div>
+
+    <div class="summary">
+      <div class="tot">Resumen: Teórico <span id="cvSumTeorico">—</span> · Contado <span id="cvSumContado">—</span> · Diferencia <span id="cvSumDif">—</span></div>
+      <div class="row"><button class="btn" id="cvImprimir">Imprimir resumen</button></div>
+    </div>
+  </section>
+
+  <!-- Submodal CHEQUES -->
+  <div class="sub-overlay" id="ovlCheques"></div>
+  <section class="sub-modal" id="mdlCheques" role="dialog" aria-modal="true" aria-labelledby="ttlCheques">
+    <header class="sub-header"><div class="title" id="ttlCheques">Cheques</div><button class="btn ghost" id="btnCloseCheques">Cerrar</button></header>
+    <div class="sub-body">
+      <div class="grid cols-3">
+        <div><label for="cqBanco">Nombre de banco</label><input id="cqBanco" type="text" placeholder="Banco" /></div>
+        <div><label for="cqNumero">Número de documento</label><input id="cqNumero" type="text" placeholder="000000" /></div>
+        <div><label for="cqValor">Valor</label><input id="cqValor" type="number" step="0.01" min="0" placeholder="0.00" /></div>
+      </div>
+      <div class="row" style="margin-top:10px"><button class="btn" id="btnAgregarCheque">Agregar</button><span class="pill">Total cheques: <strong id="chequesTotalLocal">—</strong></span></div>
+      <div style="max-height:30vh;overflow:auto;margin-top:10px">
+        <table>
+          <thead><tr><th>Banco</th><th>Número</th><th>Valor</th><th>Acción</th></tr></thead>
+          <tbody id="chequesBody"></tbody>
+        </table>
+      </div>
+      <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn primary" id="btnGuardarCheques">Guardar</button></div>
+    </div>
+  </section>
+
+  <!-- Submodal EFECTIVO -->
+  <div class="sub-overlay" id="ovlCash"></div>
+  <section class="sub-modal" id="mdlCash" role="dialog" aria-modal="true" aria-labelledby="ttlCash">
+    <header class="sub-header"><div class="title" id="ttlCash">Billetes y Monedas</div><button class="btn ghost" id="btnCloseCash">Cerrar</button></header>
+    <div class="sub-body">
+      <div id="cashDynamic"></div>
+      <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn primary" id="btnGuardarCash">Guardar</button></div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast">OK</div>
+
+  <script>
+  (function(){
+    const $  = (sel, el=document) => el.querySelector(sel);
+    const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+
+    /* ==================== PERFIL ==================== */
+    const initialsDisplay = $('#initialsDisplay');
+    const btnPerfil = $('#btnPerfil');
+    const panelPerfil = $('#panelPerfil');
+    const btnClosePerfil = $('#btnClosePerfil');
+
+    const fModulo = $('#numeroModulo');
+    const fNumero = $('#numeroEmpleado');
+    const fIniciales = $('#iniciales');
+    const fCodigo = $('#codigoEmpleado');
+    const confirmCloseSwitch = $('#confirmClose');
+
+    const STORAGE_PERFIL = 'app.perfil';
+
+    function showToast(text){
+      const toast = $('#toast');
+      toast.textContent = text;
+      toast.classList.add('show');
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(()=>toast.classList.remove('show'), 1800);
+    }
+    function getConfirmClose(){ return confirmCloseSwitch.getAttribute('data-on') === 'true'; }
+    function setConfirmClose(on){ confirmCloseSwitch.setAttribute('data-on', on ? 'true' : 'false'); confirmCloseSwitch.setAttribute('aria-checked', on ? 'true' : 'false'); }
+
+    function loadPerfil(){
+      try{
+        const raw = localStorage.getItem(STORAGE_PERFIL);
+        if(raw){
+          const data = JSON.parse(raw);
+          fModulo.value   = data.numeroModulo   || '';
+          fNumero.value   = data.numeroEmpleado || '';
+          fIniciales.value= data.iniciales      || '';
+          fCodigo.value   = data.codigoEmpleado || '';
+          setConfirmClose(Boolean(data.confirmOnClose ?? true));
+        }
+      }catch(e){ console.warn('Perfil: no se pudo leer', e); }
+      initialsDisplay.textContent = 'M.V.C.G';
+    }
+
+    function savePerfil(){
+      const data = {
+        numeroModulo: (fModulo.value||'').toString().trim(),
+        numeroEmpleado: fNumero.value || null,
+        iniciales: (fIniciales.value || '').toUpperCase(),
+        codigoEmpleado: fCodigo.value || null,
+        confirmOnClose: getConfirmClose()
+      };
+      localStorage.setItem(STORAGE_PERFIL, JSON.stringify(data));
+      showToast('Perfil guardado');
+    }
+
+    $('#btnResetPerfil').addEventListener('click', ()=>{
+      localStorage.removeItem(STORAGE_PERFIL);
+      fModulo.value=''; fNumero.value=''; fIniciales.value=''; fCodigo.value='';
+      setConfirmClose(true);
+      initialsDisplay.textContent = 'M.V.C.G';
+      showToast('Datos de perfil restablecidos');
+    });
+
+    $('#perfilForm').addEventListener('submit', (e)=>{ e.preventDefault(); savePerfil(); });
+    confirmCloseSwitch.addEventListener('click', ()=>{ setConfirmClose(!getConfirmClose()); savePerfil(); });
+    window.addEventListener('beforeunload', (e)=>{ if(getConfirmClose()){ e.preventDefault(); e.returnValue=''; }});
+
+    /* ==================== ANIMACIONES MODALES ==================== */
+    const overlay = $('#overlay');
+    const dock = $('#dock');
+    const icons = $$('.dock-btn', dock);
+    function handleDockMove(e){
+      const mx = e.clientX; const my = e.clientY;
+      icons.forEach(btn=>{
+        const b = btn.getBoundingClientRect();
+        const cx = b.left + b.width/2; const cy = b.top + b.height/2;
+        const dist = Math.hypot(mx-cx, my-cy);
+        const scale = Math.max(1, 1.8 - (dist/160));
+        btn.style.transform = `translateZ(0) scale(${Math.min(scale,1.8)})`;
+      });
+    }
+    function handleDockLeave(){ icons.forEach(btn=> btn.style.transform = 'translateZ(0) scale(1)'); }
+    dock.addEventListener('mousemove', handleDockMove); dock.addEventListener('mouseleave', handleDockLeave);
+
+    function animatePanel(panel, opening, fromIcon){
+      const centerX = window.innerWidth/2; const centerY = window.innerHeight/2;
+      const ib = fromIcon.getBoundingClientRect();
+      const iconX = ib.left + ib.width/2; const iconY = ib.top + ib.height/2;
+      const dx = iconX - centerX; const dy = iconY - centerY;
+      if(opening){
+        overlay.classList.add('show'); panel.style.display = 'block';
+        panel.animate([
+          { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(0.08,0.12)`, borderRadius:'40px' },
+          { transform: 'translate(-50%,-50%) translate(0,0) scale(1,1)', borderRadius:'16px' }
+        ], { duration: 650, easing:'cubic-bezier(.18,.89,.32,1.28)' });
+      } else {
+        const anim = panel.animate([
+          { transform: 'translate(-50%,-50%) translate(0,0) scale(1,1)', borderRadius:'16px' },
+          { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(0.06,0.1)`, borderRadius:'40px' }
+        ], { duration: 520, easing:'cubic-bezier(.2,.7,.2,1)' });
+        anim.addEventListener('finish', ()=>{ overlay.classList.remove('show'); panel.style.display = 'none'; });
+      }
+    }
+    function openPerfil(){ animatePanel(panelPerfil, true, btnPerfil); }
+    function closePerfil(){ animatePanel(panelPerfil, false, btnPerfil); }
+    btnPerfil.addEventListener('click', openPerfil); btnClosePerfil.addEventListener('click', closePerfil);
+    overlay.addEventListener('click', ()=>{ if(panelPerfil.style.display==='block') closePerfil(); if(panelRemesas.style.display==='block') closeRemesas(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ if(panelPerfil.style.display==='block') closePerfil(); if(panelRemesas.style.display==='block') closeRemesas(); }});
+
+    /* ==================== REMESAS ==================== */
+    const btnRemesas = $('#btnRemesas');
+    const panelRemesas = $('#panelRemesas');
+    const btnCloseRemesas = $('#btnCloseRemesas');
+
+    const rmBanco = $('#rmBanco'); const rmDivisa = $('#rmDivisa'); const rmBolsa = $('#rmBolsa'); const rmMontoTeorico = $('#rmMontoTeorico');
+    const btnCheques = $('#btnCheques'); const btnEfectivo = $('#btnEfectivo');
+    const kpiCheques = $('#kpiCheques'); const kpiEfectivo = $('#kpiEfectivo'); const kpiDiferencia = $('#kpiDiferencia');
+
+    const btnGuardarCuadre = $('#btnGuardarCuadre');
+    const btnImprimir = $('#btnImprimir'); const btnBorrarTodo = $('#btnBorrarTodo');
+    const bodyCuadres = $('#bodyCuadres');
+
+    const STORAGE_REMESA_STATE = 'app.remesas.state';
+    const STORAGE_REMESA_LIST  = 'app.remesas.cuadres';
+
+    const DENOMS = {
+      quetales: { symbol: 'Q', bills:[200,100,50,20,10,5,1], coins:[1,0.50,0.25,0.10,0.05,0.01] },
+      dolares:  { symbol: '$', bills:[100,50,20,10,5,2,1], coins:[] },
+      euros:    { symbol: '€', bills:[500,200,100,50,20,10,5,1], coins:[] }
+    };
+
+    let remesa = {
+      banco:'BAM', divisa:'quetales', bolsa:'', teorico:null,
+      cheques:[], efectivo:{ bills:{}, coins:{} }
+    };
+
+    function saveRemesa(){ localStorage.setItem(STORAGE_REMESA_STATE, JSON.stringify(remesa)); }
+    function loadRemesa(){
+      try{
+        const raw = localStorage.getItem(STORAGE_REMESA_STATE);
+        if(raw){
+          const s = JSON.parse(raw);
+          remesa = Object.assign(remesa, s);
+          rmBanco.value = remesa.banco; rmDivisa.value = remesa.divisa;
+          rmBolsa.value = remesa.bolsa || ''; rmMontoTeorico.value = (remesa.teorico==null? '' : remesa.teorico);
+        }
+      }catch(e){ console.warn('Remesas: no se pudo leer', e); }
+      recompute(); renderCuadres();
+    }
+
+    function getSymbol(){ return DENOMS[remesa.divisa].symbol; }
+    function fmt(n){ const v = Number(n||0); return `${getSymbol()} ${v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`; }
+    function totalCheques(){ return remesa.cheques.reduce((a,c)=>a + (Number(c.valor)||0), 0); }
+    function efectivoVacio(){ return Object.keys(remesa.efectivo.bills).length===0 && Object.keys(remesa.efectivo.coins).length===0; }
+    function totalEfectivo(){
+      let t=0;
+      for(const [den, cnt] of Object.entries(remesa.efectivo.bills)) t += Number(den)*Number(cnt||0);
+      for(const [den, cnt] of Object.entries(remesa.efectivo.coins)) t += Number(den)*Number(cnt||0);
+      return t;
+    }
+    function recompute(){
+      const hasC = remesa.cheques.length>0;
+      const hasE = !efectivoVacio();
+      const hasT = (remesa.teorico!=null && remesa.teorico!=='' && !Number.isNaN(Number(remesa.teorico)));
+      const tc = totalCheques(); const te = totalEfectivo();
+
+      $('#sumCheques').textContent = hasC ? fmt(tc) : '—';
+      $('#sumEfectivo').textContent = hasE ? fmt(te) : '—';
+      kpiCheques.textContent  = hasC ? fmt(tc) : '—';
+      kpiEfectivo.textContent = hasE ? fmt(te) : '—';
+
+      if(!hasT){
+        kpiDiferencia.classList.remove('diff-ok','diff-bad');
+        kpiDiferencia.textContent = '—';
+      } else {
+        const theor = Number(remesa.teorico||0);
+        const diff = (tc + te) - theor;
+        if(Math.abs(diff) < 0.01){
+          kpiDiferencia.classList.remove('diff-bad'); kpiDiferencia.classList.add('diff-ok');
+          kpiDiferencia.textContent = 'Sin diferencias';
+        } else {
+          kpiDiferencia.classList.remove('diff-ok'); kpiDiferencia.classList.add('diff-bad');
+          kpiDiferencia.textContent = `Diferencia: ${fmt(diff)}`;
+        }
+      }
+    }
+
+    rmBanco.addEventListener('change', ()=>{ remesa.banco = rmBanco.value; saveRemesa(); });
+    rmDivisa.addEventListener('change', ()=>{ remesa.divisa = rmDivisa.value; saveRemesa(); recompute(); });
+    rmBolsa.addEventListener('input', ()=>{ remesa.bolsa = rmBolsa.value; saveRemesa(); });
+    rmMontoTeorico.addEventListener('input', ()=>{ const val = rmMontoTeorico.value; remesa.teorico = (val==='' ? null : Number(val)); saveRemesa(); recompute(); });
+
+    function getCuadres(){ try{ return JSON.parse(localStorage.getItem(STORAGE_REMESA_LIST)||'[]'); }catch(_){ return []; } }
+    function setCuadres(arr){ localStorage.setItem(STORAGE_REMESA_LIST, JSON.stringify(arr)); }
+
+    function guardarCuadre(){
+      const tc = totalCheques(); const te = totalEfectivo();
+      const theorRaw = rmMontoTeorico.value; const theor = (theorRaw===''? null : Number(theorRaw));
+      const diff = (theor==null? null : (tc+te)-theor);
+      const now = new Date();
+      const perfil = JSON.parse(localStorage.getItem(STORAGE_PERFIL)||'{}');
+
+      const snap = {
+        id: Date.now(), fecha: now.toISOString(),
+        banco: remesa.banco, divisa: remesa.divisa, bolsa: remesa.bolsa,
+        teorico: theor,
+        cheques: JSON.parse(JSON.stringify(remesa.cheques)),
+        efectivo: JSON.parse(JSON.stringify(remesa.efectivo)),
+        totCheques: tc, totEfectivo: te, diff: diff,
+        perfil: { numeroModulo: perfil.numeroModulo||'', numeroEmpleado: perfil.numeroEmpleado||'', iniciales: perfil.iniciales||'' }
+      };
+
+      const list = getCuadres(); list.unshift(snap); setCuadres(list);
+
+      remesa.bolsa=''; remesa.teorico=null; remesa.cheques=[]; remesa.efectivo={bills:{},coins:{}};
+      rmBolsa.value=''; rmMontoTeorico.value='';
+      saveRemesa(); recompute(); renderCuadres();
+      showToast('Cuadre guardado');
+    }
+    btnGuardarCuadre.addEventListener('click', guardarCuadre);
+
+    function renderCuadres(){
+      const list = getCuadres(); bodyCuadres.innerHTML='';
+      const sym = (d)=> (DENOMS[d]?.symbol || '');
+      list.forEach(item=>{
+        const tr = document.createElement('tr');
+        const f  = new Date(item.fecha);
+        const hasC = Array.isArray(item.cheques) && item.cheques.length>0;
+        const hasE = item.efectivo && (Object.keys(item.efectivo.bills||{}).length>0 || Object.keys(item.efectivo.coins||{}).length>0);
+        const hasT = (item.teorico!=null && item.teorico!=='' && !Number.isNaN(Number(item.teorico)));
+        const diff = (item.diff==null? null : Number(item.diff));
+        tr.innerHTML = `
+          <td>${f.toLocaleString()}</td>
+          <td>${item.banco}</td>
+          <td>${item.divisa}</td>
+          <td>${hasC? (sym(item.divisa)+' '+Number(item.totCheques||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})):'—'}</td>
+          <td>${hasE? (sym(item.divisa)+' '+Number(item.totEfectivo||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})):'—'}</td>
+          <td>${hasT? (sym(item.divisa)+' '+Number(item.teorico||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})):'—'}</td>
+          <td>${(hasT && diff!=null)? (`<span style="color:${Math.abs(diff)<0.01?'#16a34a':'#ef4444'}">${Math.abs(diff)<0.01?'OK':(sym(item.divisa)+' '+diff.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}))}</span>`):'—'}</td>
+          <td>
+            <button class="btn" data-load="${item.id}">Cargar</button>
+            <button class="btn" data-del="${item.id}">Eliminar</button>
+          </td>`;
+        bodyCuadres.appendChild(tr);
+      });
+      bodyCuadres.querySelectorAll('button[data-del]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const id=Number(btn.getAttribute('data-del'));
+          const next=getCuadres().filter(x=>x.id!==id);
+          setCuadres(next); renderCuadres(); showToast('Cuadre eliminado');
+        });
+      });
+      bodyCuadres.querySelectorAll('button[data-load]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const id=Number(btn.getAttribute('data-load'));
+          const it=getCuadres().find(x=>x.id===id); if(!it) return;
+          remesa.banco=it.banco; remesa.divisa=it.divisa; remesa.bolsa=it.bolsa; remesa.teorico=it.teorico; remesa.cheques=it.cheques; remesa.efectivo=it.efectivo;
+          rmBanco.value=remesa.banco; rmDivisa.value=remesa.divisa; rmBolsa.value=remesa.bolsa; rmMontoTeorico.value=(remesa.teorico==null?'':remesa.teorico);
+          saveRemesa(); recompute(); showToast('Cuadre cargado para edición');
+        });
+      });
+    }
+
+    /* ======= Remesas: PDF de bolsas (mini tarjetas 3x3 con código de barras) ======= */
+    function renderBarcodeSVG(value){
+      try{
+        const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+        JsBarcode(svg, value || '-', {format:'CODE128', width:1, height:28, margin:0, displayValue:true, fontSize:9});
+        return svg.outerHTML;
+      }catch(e){
+        return `<div style="font:11px monospace">${value||'-'}</div>`;
+      }
+    }
+    function cashRows(entries, symbol){
+      const denoms = Object.keys(entries||{}).map(Number).filter(d=>Number(entries[d])>0).sort((a,b)=>b-a);
+      if(!denoms.length) return '';
+      return denoms.map(d=>{
+        const piezas = Number(entries[d]||0);
+        const val = d*piezas;
+        return `<tr><td>${symbol} ${d}</td><td style="text-align:right">${piezas}</td><td style="text-align:right">${val.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;
+      }).join('');
+    }
+    function cheqRows(list){
+      if(!Array.isArray(list) || !list.length) return '';
+      return list.map(c=>`<tr><td>${c.banco}</td><td>${c.numero}</td><td style="text-align:right">${Number(c.valor||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`).join('');
+    }
+
+    btnImprimir.addEventListener('click', ()=>{
+      const list = getCuadres();
+      if(!list.length){ alert('No hay bolsas guardadas para imprimir.'); return; }
+
+      const tiles = list.map(item=>{
+        const symbol = DENOMS[item.divisa]?.symbol || '';
+        const perfil = item.perfil || {};
+        const fecha = new Date(item.fecha).toLocaleString();
+
+        const rb = cashRows((item.efectivo||{}).bills||{}, symbol);
+        const rc = cashRows((item.efectivo||{}).coins||{}, symbol);
+        const rch= cheqRows(item.cheques||[]);
+
+        const secBilletes = rb ? `
+          <div class="sec">Billetes</div>
+          <table class="mini"><thead><tr><th>Denominación</th><th style="text-align:right">Piezas</th><th style="text-align:right">Valor</th></tr></thead>
+          <tbody>${rb}</tbody></table>` : '';
+
+        const secMonedas = rc ? `
+          <div class="sec">Monedas</div>
+          <table class="mini"><thead><tr><th>Denominación</th><th style="text-align:right">Piezas</th><th style="text-align:right">Valor</th></tr></thead>
+          <tbody>${rc}</tbody></table>` : '';
+
+        const secCheques = rch ? `
+          <div class="sec">Cheques</div>
+          <table class="mini"><thead><tr><th>Banco</th><th>Número</th><th style="text-align:right">Valor</th></tr></thead>
+          <tbody>${rch}</tbody></table>` : '';
+
+        const tc = Number(item.totCheques||0);
+        const te = Number(item.totEfectivo||0);
+        const theor = Number(item.teorico||0);
+        const hasT = (item.teorico!=null && item.teorico!=='' && !Number.isNaN(Number(item.teorico)));
+        const diff = (tc+te) - theor;
+
+        const diffBlock = hasT
+          ? (Math.abs(diff)<0.01
+              ? `<div style="color:#16a34a;font-weight:700">Monto teórico y físico verificados correctamente.</div>`
+              : `<div style="color:#ef4444;font-weight:700">Diferencia: ${symbol} ${diff.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div>`)
+          : '';
+
+        const totT = hasT ? `${symbol} ${theor.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}` : '—';
+
+        const barcode = renderBarcodeSVG(item.bolsa||'-');
+
+        return `
+          <div class="tile">
+            <div class="tile-head">
+              <div>
+                <div><b>Módulo:</b> ${perfil.numeroModulo||'-'}</div>
+                <div><b>Empleado:</b> ${perfil.numeroEmpleado||'-'}</div>
+                <div><b>Iniciales:</b> ${(perfil.iniciales||'').toUpperCase()||'-'}</div>
+              </div>
+              <div style="text-align:right">
+                <div><b>Banco:</b> ${item.banco}</div>
+                <div><b>ID bolsa:</b> ${item.bolsa||'-'}</div>
+                <div><b>Fecha/Hora:</b> ${fecha}</div>
+              </div>
+            </div>
+            <div class="tile-body">
+              ${secBilletes}
+              ${secMonedas}
+              ${secCheques}
+              <table class="mini tot"><tbody>
+                <tr><td><b>Teórico</b></td><td style="text-align:right">${totT}</td></tr>
+                <tr><td><b>Cheques</b></td><td style="text-align:right">${symbol} ${tc.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>
+                <tr><td><b>Efectivo</b></td><td style="text-align:right">${symbol} ${te.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>
+              </tbody></table>
+              ${diffBlock}
+              <div class="barcode">${barcode}</div>
+            </div>
+          </div>`;
+      }).join('');
+
+      const css = `
+        @page{ size:A4; margin:6mm }
+        body{ font-family:${CSS.escape(getComputedStyle(document.body).fontFamily)}; color:#111; margin:0 }
+        .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:4mm; padding:4mm }
+        .tile{ border:0.8px solid #bbb; border-radius:6px; padding:4px; font-size:9px }
+        .tile-head{ display:flex; justify-content:space-between; gap:6px; border-bottom:1px dashed #bbb; padding-bottom:3px; margin-bottom:3px }
+        .tile-body .mini{ width:100%; border-collapse:collapse }
+        .mini th, .mini td{ border:0.8px solid #ddd; padding:1.5px 3px }
+        .mini thead th{ background:#f3f4f6; font-weight:600 }
+        .mini.tot td{ font-weight:600 }
+        .sec{ font-size:9px; color:#374151; margin:2px 0 4px }
+        .barcode{ margin-top:3px }
+      `;
+      const html = `<!doctype html><html><head><meta charset='utf-8'><style>${css}</style><title>Bolsas de Remesas</title></head><body><div class="grid">${tiles}</div></body></html>`;
+      const w = window.open('', '_blank'); if(!w) return;
+      w.document.write(html); w.document.close(); w.focus(); setTimeout(()=>w.print(), 300);
+    });
+
+    btnRemesas.addEventListener('click', ()=> animatePanel(panelRemesas, true, btnRemesas));
+    btnCloseRemesas.addEventListener('click', ()=> animatePanel(panelRemesas, false, btnRemesas));
+
+    btnBorrarTodo.addEventListener('click', ()=>{
+      if(!confirm('¿Eliminar todos los cuadres y el estado de remesas?')) return;
+      localStorage.removeItem(STORAGE_REMESA_LIST); localStorage.removeItem(STORAGE_REMESA_STATE);
+      remesa = { banco:'BAM', divisa:'quetales', bolsa:'', teorico:null, cheques:[], efectivo:{bills:{},coins:{}} };
+      rmBanco.value=remesa.banco; rmDivisa.value=remesa.divisa; rmBolsa.value=''; rmMontoTeorico.value='';
+      recompute(); renderCuadres(); showToast('Todos los datos fueron eliminados');
+    });
+
+    /* ==================== CUADRES VARIOS (Q) ==================== */
+    const btnVarios = $('#btnVarios');
+    const secVarios = $('#cuadresVarios');
+    const cvBolsa = $('#cvBolsa');
+    const cvTeoricoInput = $('#cvTeoricoInput');
+    const cvCash = $('#cvCash');
+    const cvDif = $('#cvDif'), cvTeorico = $('#cvTeorico'), cvContado = $('#cvContado');
+    const cvGuardar = $('#cvGuardar'), cvLimpiarTodo = $('#cvLimpiarTodo');
+    const cvBody = $('#cvBody');
+    const cvSumTeorico = $('#cvSumTeorico'), cvSumContado = $('#cvSumContado'), cvSumDif = $('#cvSumDif');
+    const cvImprimir = $('#cvImprimir');
+
+    const STORAGE_CV_STATE = 'app.cv.state';
+    const STORAGE_CV_LIST  = 'app.cv.items';
+    const QDEN = { bills:[200,100,50,20,10,5,1], coins:[1,0.50,0.25,0.10,0.05,0.01], symbol:'Q' };
+    let cv = { bolsa:'', teorico:null, efectivo:{ bills:{}, coins:{} } };
+
+    function fmtQ(n){ const v=Number(n||0); return `${QDEN.symbol} ${v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`; }
+    function totalContadoCV(){
+      let t=0; for(const [d,c] of Object.entries(cv.efectivo.bills)) t += Number(d)*Number(c||0);
+      for(const [d,c] of Object.entries(cv.efectivo.coins)) t += Number(d)*Number(c||0);
+      return t;
+    }
+
+    function renderCvCash(){
+      cvCash.innerHTML = '';
+      const mk = (title, denoms, isCoin) => {
+        if(!denoms || !denoms.length) return;
+        const wrap = document.createElement('div');
+        wrap.innerHTML = `<div class="title" style="margin:6px 0">${title}</div>`;
+        const grid = document.createElement('div'); grid.className='denom-grid';
+        denoms.forEach(den=>{
+          const id=`cv_${isCoin?'c':'b'}_${String(den).replace(/\./g,'_')}`;
+          const val = (isCoin? cv.efectivo.coins[den] : cv.efectivo.bills[den]) || '';
+          const div=document.createElement('div');
+          div.innerHTML = `<label>${QDEN.symbol} ${den}</label><input id="${id}" type="number" min="0" step="1" value="${val}" />`;
+          grid.appendChild(div);
+        });
+        wrap.appendChild(grid); cvCash.appendChild(wrap);
+      };
+      mk('Billetes', QDEN.bills, false); mk('Monedas', QDEN.coins, true);
+
+      QDEN.bills.forEach(den=>{
+        const id=`cv_b_${String(den).replace(/\./g,'_')}`; const el=$('#'+CSS.escape(id));
+        if(el) el.addEventListener('input', ()=>{
+          const v = el.value===''? 0 : Number(el.value);
+          if(v>0) cv.efectivo.bills[den]=v; else delete cv.efectivo.bills[den];
+          saveCVState(); recomputeCV();
+        });
+      });
+      QDEN.coins.forEach(den=>{
+        const id=`cv_c_${String(den).replace(/\./g,'_')}`; const el=$('#'+CSS.escape(id));
+        if(el) el.addEventListener('input', ()=>{
+          const v = el.value===''? 0 : Number(el.value);
+          if(v>0) cv.efectivo.coins[den]=v; else delete cv.efectivo.coins[den];
+          saveCVState(); recomputeCV();
+        });
+      });
+    }
+
+    function recomputeCV(){
+      const hasT = (cv.teorico!=null && cv.teorico!=='' && !Number.isNaN(Number(cv.teorico)));
+      const contado = totalContadoCV();
+      cvContado.textContent = (contado>0)? fmtQ(contado): '—';
+      cvTeorico.textContent = hasT? fmtQ(cv.teorico) : '—';
+      if(hasT){
+        const diff = contado - Number(cv.teorico||0);
+        cvDif.textContent = fmtQ(diff);
+        cvDif.style.color = Math.abs(diff)<0.01? '#16a34a' : '#ef4444';
+      } else {
+        cvDif.textContent = '—'; cvDif.style.color = '';
+      }
+    }
+
+    function loadCVState(){
+      try{
+        const raw = localStorage.getItem(STORAGE_CV_STATE);
+        if(raw){ const s = JSON.parse(raw); cv = Object.assign(cv, s); }
+      }catch(_){}
+      cvBolsa.value = cv.bolsa || '';
+      cvTeoricoInput.value = (cv.teorico==null? '' : cv.teorico);
+      renderCvCash(); recomputeCV();
+    }
+    function saveCVState(){ localStorage.setItem(STORAGE_CV_STATE, JSON.stringify(cv)); }
+
+    cvBolsa.addEventListener('input', ()=>{ cv.bolsa = cvBolsa.value; saveCVState(); });
+    cvTeoricoInput.addEventListener('input', ()=>{ const val = cvTeoricoInput.value; cv.teorico = (val===''? null : Number(val)); saveCVState(); recomputeCV(); });
+
+    function getCVList(){ try{ return JSON.parse(localStorage.getItem(STORAGE_CV_LIST)||'[]'); }catch(_){ return []; } }
+    function setCVList(arr){ localStorage.setItem(STORAGE_CV_LIST, JSON.stringify(arr)); }
+
+    function renderCVList(){
+      const list = getCVList();
+      cvBody.innerHTML = '';
+      let sumT=0, sumC=0;
+      list.forEach(it=>{
+        const tr=document.createElement('tr');
+        const f = new Date(it.fecha).toLocaleString();
+        const hasT = (it.teorico!=null && it.teorico!=='' && !Number.isNaN(Number(it.teorico)));
+        const contado = Number(it.totContado||0);
+        const teorico = hasT? Number(it.teorico) : null;
+        const diff = hasT? (contado - teorico) : null;
+        sumC += contado; if(hasT) sumT += teorico;
+        tr.innerHTML = `
+          <td>${f}</td>
+          <td>${it.bolsa||'—'}</td>
+          <td>${hasT? fmtQ(teorico): '—'}</td>
+          <td>${fmtQ(contado)}</td>
+          <td>${hasT? `<span style="color:${Math.abs(diff)<0.01?'#16a34a':'#ef4444'}">${fmtQ(diff)}</span>`:'—'}</td>
+          <td><button class="btn" data-del="${it.id}">Eliminar</button></td>`;
+        cvBody.appendChild(tr);
+      });
+      cvBody.querySelectorAll('button[data-del]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const id = Number(btn.getAttribute('data-del'));
+          const next = getCVList().filter(x=>x.id!==id);
+          setCVList(next); renderCVList();
+        });
+      });
+      const sumD = sumC - sumT;
+      cvSumTeorico.textContent = sumT>0? fmtQ(sumT) : '—';
+      cvSumContado.textContent = sumC>0? fmtQ(sumC) : '—';
+      cvSumDif.textContent = (sumC>0||sumT>0)? fmtQ(sumD) : '—';
+      cvSumDif.style.color = Math.abs(sumD)<0.01? '#16a34a':'#ef4444';
+    }
+
+    cvGuardar.addEventListener('click', ()=>{
+      const now = new Date();
+      const item = {
+        id: Date.now(),
+        fecha: now.toISOString(),
+        bolsa: (cv.bolsa||'').trim(),
+        teorico: (cv.teorico==null? null : Number(cv.teorico)),
+        efectivo: JSON.parse(JSON.stringify(cv.efectivo)),
+        totContado: totalContadoCV()
+      };
+      const list = getCVList(); list.unshift(item); setCVList(list);
+      cv.efectivo = { bills:{}, coins:{} }; saveCVState();
+      renderCvCash(); recomputeCV(); renderCVList();
+    });
+
+    cvLimpiarTodo.addEventListener('click', ()=>{
+      if(!confirm('¿Limpiar todos los datos de Cuadres varios?')) return;
+      localStorage.removeItem(STORAGE_CV_STATE);
+      localStorage.removeItem(STORAGE_CV_LIST);
+      cv = { bolsa:'', teorico:null, efectivo:{bills:{},coins:{}} };
+      cvBolsa.value=''; cvTeoricoInput.value='';
+      renderCvCash(); recomputeCV(); renderCVList();
+    });
+
+    // ====== Cuadres varios: Imprimir RESUMEN con Perfil + piezas + Bolsas (número + total contado + código de barras) ======
+    cvImprimir.addEventListener('click', ()=>{
+      const list = getCVList();
+
+      // Totales
+      let sumT=0, sumC=0;
+
+      // Agregadores de piezas por denominación
+      const aggBills = {}; const aggCoins = {};
+      QDEN.bills.forEach(d=>{ aggBills[d]=0; });
+      QDEN.coins.forEach(d=>{ aggCoins[d]=0; });
+
+      // Bolsas y totales por bolsa (solo no vacías)
+      const bolsaTotals = {};
+      list.forEach(it=>{
+        sumC += Number(it.totContado||0);
+        if(it.teorico!=null && it.teorico!=='') sumT += Number(it.teorico||0);
+        const e = it.efectivo||{}; const b = e.bills||{}; const c = e.coins||{};
+        Object.keys(b).forEach(den=>{ aggBills[den] = (Number(aggBills[den])||0) + Number(b[den]||0); });
+        Object.keys(c).forEach(den=>{ aggCoins[den] = (Number(aggCoins[den])||0) + Number(c[den]||0); });
+
+        const bol = (it.bolsa||'').trim();
+        if(bol){ bolsaTotals[bol] = (bolsaTotals[bol]||0) + Number(it.totContado||0); }
+      });
+      const sumD = sumC - sumT;
+
+      // Filas de billetes
+      const billsSorted = Object.keys(aggBills).map(Number).filter(d=>Number(aggBills[d])>0).sort((a,b)=>b-a);
+      const rowsBills = billsSorted.length ? billsSorted.map(d=>{
+        const piezas = Number(aggBills[d]||0); const val = d*piezas;
+        return `<tr><td>Q ${d}</td><td class="num">${piezas}</td><td class="num">${val.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;
+      }).join('') : `<tr><td colspan="3">—</td></tr>`;
+
+      // Filas de monedas
+      const coinsSorted = Object.keys(aggCoins).map(Number).filter(d=>Number(aggCoins[d])>0).sort((a,b)=>b-a);
+      const rowsCoins = coinsSorted.length ? coinsSorted.map(d=>{
+        const piezas = Number(aggCoins[d]||0); const val = d*piezas;
+        return `<tr><td>Q ${d}</td><td class="num">${piezas}</td><td class="num">${val.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;
+      }).join('') : '';
+
+      // Perfil
+      const perfil = JSON.parse(localStorage.getItem(STORAGE_PERFIL)||'{}');
+      const modulo = perfil.numeroModulo||'-';
+      const empleado = perfil.numeroEmpleado||'-';
+      const iniciales = (perfil.iniciales||'').toUpperCase()||'-';
+      const fecha = new Date().toLocaleString();
+
+      // Generar SVG de códigos de barras por bolsa
+      function barcodeSVG(val){
+        try{
+          const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+          JsBarcode(svg, val || '-', {format:'CODE128', width:1, height:26, margin:0, displayValue:true, fontSize:9});
+          return svg.outerHTML;
+        }catch(e){
+          return `<div style="font:11px monospace">${val||'-'}</div>`;
+        }
+      }
+      const bolsaKeys = Object.keys(bolsaTotals);
+      const rowsBolsas = bolsaKeys.length
+        ? bolsaKeys.map(b=>`<tr><td>${b}</td><td class="num">${fmtQ(bolsaTotals[b])}</td><td class="barcode-cell">${barcodeSVG(b)}</td></tr>`).join('')
+        : `<tr><td colspan="3">—</td></tr>`;
+
+      // Estilos A4: remover leyenda previa y colocar “Cuadres varios unificados”
+      const css = `
+        @page{ size:A4; margin:8mm }
+        body{ font-family:${CSS.escape(getComputedStyle(document.body).fontFamily)}; color:#111; margin:0 }
+        .wrapr{ padding:6mm }
+        .hdr{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:8px }
+        .card{ border:1px solid #cfd4dc; border-radius:8px; padding:8px; background:#fff }
+        .hdr .card b{ color:#111 }
+        h1{ font-size:16px; margin:0 0 4px 0 }
+        .sub{ color:#475569; font-size:12px }
+        .grid2{ display:grid; grid-template-columns:1.1fr 1fr; gap:10px; margin-bottom:10px }
+        table{ width:100%; border-collapse:collapse; font-size:12px }
+        th,td{ border:1px solid #d7dbe3; padding:6px 8px; text-align:left; vertical-align:middle }
+        thead th{ background:#f3f4f6; font-weight:600 }
+        .totals td{ font-size:14px; font-weight:700 }
+        .num{ text-align:right }
+        .section{ margin-top:10px }
+        .title-sm{ font-size:12px; color:#374151; margin:4px 0 6px }
+        .muted{ color:#6b7280 }
+        .barcode-cell svg{ width:180px; height:32px }
+      `;
+
+      const tableTotals = `
+        <table class="totals">
+          <tbody>
+            <tr><td>Total Teórico</td><td class="num">${sumT>0? fmtQ(sumT): '—'}</td></tr>
+            <tr><td>Total Contado</td><td class="num">${sumC>0? fmtQ(sumC): '—'}</td></tr>
+            <tr><td>Diferencia</td><td class="num">${(sumC>0||sumT>0)? fmtQ(sumD): '—'}</td></tr>
+          </tbody>
+        </table>`;
+
+      const tableBills = `
+        <div class="section">
+          <div class="title-sm">Piezas por denominación – <b>Billetes</b></div>
+          <table><thead><tr><th>Denominación</th><th class="num">Piezas</th><th class="num">Valor</th></tr></thead><tbody>${rowsBills}</tbody></table>
+        </div>`;
+
+      const tableCoins = rowsCoins ? `
+        <div class="section">
+          <div class="title-sm">Piezas por denominación – Monedas</div>
+          <table><thead><tr><th>Denominación</th><th class="num">Piezas</th><th class="num">Valor</th></tr></thead><tbody>${rowsCoins}</tbody></table>
+        </div>` : '';
+
+      const tableBolsas = `
+        <div class="section">
+          <div class="title-sm">Bolsas incluidas</div>
+          <table>
+            <thead><tr><th>Número de bolsa</th><th class="num">Total contado</th><th>Código de barras</th></tr></thead>
+            <tbody>${rowsBolsas}</tbody>
+          </table>
+        </div>`;
+
+      const html = `
+        <!doctype html><html><head><meta charset='utf-8'><title>Resumen – Cuadres varios</title><style>${css}</style></head>
+        <body><div class="wrapr">
+          <div class="hdr">
+            <div class="card">
+              <h1>Resumen – Cuadres varios (Q)</h1>
+              <div class="sub">Fecha/Hora: ${fecha}</div>
+            </div>
+            <div class="card">
+              <div><b>Módulo:</b> ${modulo}</div>
+              <div><b>Empleado:</b> ${empleado}</div>
+              <div><b>Iniciales:</b> ${iniciales}</div>
+            </div>
+          </div>
+
+          <div class="grid2">
+            ${tableTotals}
+            <div class="muted" style="align-self:start"><b>Cuadres varios unificados</b></div>
+          </div>
+
+          ${tableBills}
+          ${tableCoins}
+          ${tableBolsas}
+        </div></body></html>`;
+
+      const w = window.open('', '_blank'); if(!w) return;
+      w.document.write(html); w.document.close(); w.focus(); setTimeout(()=>w.print(), 300);
+    });
+
+    // Inicializar Cuadres varios
+    btnVarios.addEventListener('click', ()=>{
+      secVarios.style.display = 'block';
+      secVarios.scrollIntoView({behavior:'smooth', block:'start'});
+      if(!btnVarios._loaded){ loadCVState(); renderCVList(); btnVarios._loaded = true; }
+    });
+
+    // init general
+    loadPerfil(); loadRemesa();
+  })();
+  </script>
+</body>
+</html>
